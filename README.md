@@ -3,7 +3,7 @@
 ## TODO
 - replace icon
 - remove cadastre from gui
-- remove cadastre from backend
+- remove cadastre from backend (do not forget xsd/jaxb stuff)
 
 
 ## Development
