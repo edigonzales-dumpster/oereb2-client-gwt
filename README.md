@@ -1,5 +1,11 @@
 # oereb2-client-gwt
 
+## TODO
+- replace icon
+- remove cadastre from gui
+- remove cadastre from backend
+
+
 ## Development
 
 First Terminal:
