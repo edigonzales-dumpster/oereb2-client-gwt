@@ -1,5 +1,6 @@
 package ch.so.agi.grundstuecksinformation.client;
 
+import jsinterop.base.JsPropertyMap;
 import ol.Collection;
 import ol.Coordinate;
 import ol.Extent;
@@ -11,6 +12,7 @@ import ol.ViewOptions;
 import ol.control.Control;
 import ol.interaction.DefaultInteractionsOptions;
 import ol.interaction.Interaction;
+import ol.interaction.MouseWheelZoom;
 import ol.layer.Base;
 import ol.layer.Group;
 import ol.layer.Image;
@@ -155,13 +157,13 @@ public class MapPresets {
         //Coordinate centerCoordinate = new Coordinate(2688777,1283230); // Schaffhausen
         //Coordinate centerCoordinate = new Coordinate(2645218,1246759); // Unterentfelden
         //Coordinate centerCoordinate = new Coordinate(2683467,1248065); // Zürich
-//        Coordinate centerCoordinate = new Coordinate(2660158,1183640); // Mittelpunkt CH
+        //Coordinate centerCoordinate = new Coordinate(2660158,1183640); // Mittelpunkt CH
         Coordinate centerCoordinate = new Coordinate(2616491, 1240287); // Mittelpunkt SO
 
 
         view.setCenter(centerCoordinate);
 //      view.setZoom(3);
-      view.setZoom(6);
+        view.setZoom(6);
         //view.setZoom(14);
 
         MapOptions mapOptions = OLFactory.createOptions();
@@ -171,8 +173,7 @@ public class MapPresets {
 
         DefaultInteractionsOptions interactionOptions = new ol.interaction.DefaultInteractionsOptions();
         interactionOptions.setPinchRotate(false);
-        mapOptions.setInteractions(Interaction.defaults(interactionOptions));
-
+        interactionOptions.setMouseWheelZoom(true);
         Map map = new Map(mapOptions);
         //map.addLayer(wmsLayer);
         map.addLayer(layerGroup);
@@ -230,9 +231,20 @@ public class MapPresets {
 
         DefaultInteractionsOptions interactionOptions = new ol.interaction.DefaultInteractionsOptions();
         interactionOptions.setPinchRotate(false);
+        interactionOptions.setConstrainResolution(true);
         mapOptions.setInteractions(Interaction.defaults(interactionOptions));
 
+        // TODO / FIXME
+        // Funktioniert nicht mit ol3 v6.4.3.
+//        MouseWheelZoom mouseWheelZoom = new MouseWheelZoom();
+//        JsPropertyMap<java.lang.Object> properties = JsPropertyMap.of();
+//        properties.set("constrainResolution", "true");
+//        mouseWheelZoom.setProperties(properties);
+//        mouseWheelZoom.setActive(true);
+
         Map map = new Map(mapOptions);
+//        map.addInteraction(mouseWheelZoom);
+
         map.addLayer(wmtsLayer);
         
         return map;

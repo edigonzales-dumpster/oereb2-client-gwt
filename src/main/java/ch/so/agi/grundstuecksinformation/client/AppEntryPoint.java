@@ -29,8 +29,6 @@ import org.dominokit.domino.ui.notifications.Notification;
 import org.dominokit.domino.ui.sliders.Slider;
 import org.dominokit.domino.ui.style.StyleType;
 import org.dominokit.domino.ui.style.Styles;
-import org.dominokit.domino.ui.tabs.Tab;
-import org.dominokit.domino.ui.tabs.TabsPanel;
 import org.dominokit.domino.ui.themes.Theme;
 import org.dominokit.domino.ui.utils.DominoElement;
 import org.dominokit.domino.ui.utils.TextNode;
@@ -49,9 +47,6 @@ import static org.dominokit.domino.ui.style.Unit.px;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.DivElement;
-import com.google.gwt.dom.client.Element;
-import com.google.gwt.dom.client.LinkElement;
-import com.google.gwt.dom.client.ScriptElement;
 import com.google.gwt.i18n.client.NumberFormat;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
@@ -65,15 +60,11 @@ import ch.so.agi.grundstuecksinformation.shared.ExtractServiceAsync;
 import ch.so.agi.grundstuecksinformation.shared.SettingsResponse;
 import ch.so.agi.grundstuecksinformation.shared.SettingsService;
 import ch.so.agi.grundstuecksinformation.shared.SettingsServiceAsync;
-import ch.so.agi.grundstuecksinformation.shared.models.Building;
-import ch.so.agi.grundstuecksinformation.shared.models.BuildingEntry;
 import ch.so.agi.grundstuecksinformation.shared.models.ConcernedTheme;
 import ch.so.agi.grundstuecksinformation.shared.models.Document;
 import ch.so.agi.grundstuecksinformation.shared.models.Egrid;
-import ch.so.agi.grundstuecksinformation.shared.models.LandCoverShare;
 import ch.so.agi.grundstuecksinformation.shared.models.NotConcernedTheme;
 import ch.so.agi.grundstuecksinformation.shared.models.Office;
-import ch.so.agi.grundstuecksinformation.shared.models.PostalAddress;
 import ch.so.agi.grundstuecksinformation.shared.models.RealEstateDPR;
 import ch.so.agi.grundstuecksinformation.shared.models.ReferenceWMS;
 import ch.so.agi.grundstuecksinformation.shared.models.Restriction;
@@ -130,11 +121,9 @@ public class AppEntryPoint implements EntryPoint {
 
     // Settings
     private String MY_VAR;
-    private String OPENSEARCH_DESCRIPTION_URL;
     private String SEARCH_SERVICE_URL;
     private String DATA_SERVICE_URL;
     private String OEREB_SERVICE_URL;
-    private String CADASTRE_SERVICE_URL;
 
     private String SUB_HEADER_FONT_SIZE = "16px";
     private String BODY_FONT_SIZE = "14px";
@@ -167,8 +156,9 @@ public class AppEntryPoint implements EntryPoint {
     
     private String identifyRequestTemplate = "https://api3.geo.admin.ch/rest/services/all/MapServer/identify?geometry=%s,%s&geometryFormat=geojson&geometryType=esriGeometryPoint&imageDisplay=1780,772,96&lang=de&layers=all:ch.kantone.cadastralwebmap-farbe&limit=10&mapExtent=%s,%s,%s,%s&returnGeometry=true&sr=2056&tolerance=10";
 
-    // List with all oereb wms layer that will be added to the ol3 map
-    // and removed from it afterwards.
+    // Liste mit allen OEREB-WMS-Layer. Beim Hinzufügen in die Karten, werden
+    // die WMS-Layer in dieser Liste gespeichert damit beim Entfernen der Layer
+    // aus der Karte auch noch weiss, welche Layer gelöscht werden müssen.
     private ArrayList<String> oerebWmsLayers = new ArrayList<String>();
     
     private HashMap<String, Boolean> innerOerebPanelStateMap = new HashMap<String, Boolean>();
@@ -184,26 +174,16 @@ public class AppEntryPoint implements EntryPoint {
             @Override
             public void onSuccess(SettingsResponse result) {
                 MY_VAR = (String) result.getSettings().get("MY_VAR");
-                OPENSEARCH_DESCRIPTION_URL = (String) result.getSettings().get("OPENSEARCH_DESCRIPTION_URL");
                 SEARCH_SERVICE_URL = (String) result.getSettings().get("SEARCH_SERVICE_URL");
                 DATA_SERVICE_URL = (String) result.getSettings().get("DATA_SERVICE_URL");
                 OEREB_SERVICE_URL = (String) result.getSettings().get("OEREB_SERVICE_URL");
-                CADASTRE_SERVICE_URL = (String) result.getSettings().get("CADASTRE_SERVICE_URL");
                 init();
             }
         });
     }
     
     @SuppressWarnings("unchecked")
-    private void init() {
-        Element head = com.google.gwt.dom.client.Document.get().getElementsByTagName("head").getItem(0);        
-        LinkElement opensearchdescription = com.google.gwt.dom.client.Document.get().createLinkElement();
-        opensearchdescription.setRel("search");
-        opensearchdescription.setType("application/opensearchdescription+xml");
-        opensearchdescription.setHref(OPENSEARCH_DESCRIPTION_URL);
-        opensearchdescription.setTitle("Grundstücksinformationssuche");
-        head.appendChild(opensearchdescription);
-        
+    private void init() {        
         Theme theme = new Theme(ColorScheme.RED);
         theme.apply();
 
@@ -215,11 +195,28 @@ public class AppEntryPoint implements EntryPoint {
         HTMLElement searchCard = div().id("searchCard").element();
         body().add(searchCard);
 
-        HTMLElement logoDiv = div().id("logoDiv")
-                .add(img().attr("src", GWT.getHostPageBaseURL() + "logo-grundstuecksinformation.png")
-                        .attr("alt", "Logo Grundstücksinformation").attr("width", "62%"))
-                .element();
+        HTMLElement logoDiv = div().id("logoDiv").element();
+        HTMLElement logoOerebSpan = span().id("logoOerebSpan").element();
+        HTMLElement logoOereb = div().add(img().attr("src", GWT.getHostPageBaseURL() + "logo_oereb_small.png")
+                        .attr("alt", "Logo ÖREB-Kataster").attr("width", "70%")).element();
+        logoOerebSpan.appendChild(logoOereb);
+        logoDiv.appendChild(logoOerebSpan);
+        
+        HTMLElement logoCantonSpan = span().id("logoCantonSpan").element();
+        HTMLElement logoCanton = div().add(img().attr("src", GWT.getHostPageBaseURL() + "Logo.png")
+                        .attr("alt", "Logo Kanton").attr("width", "80%")).element();
+        logoCantonSpan.appendChild(logoCanton);
+        logoDiv.appendChild(logoCantonSpan);
+
         searchCard.appendChild(logoDiv);
+          
+//        HTMLElement resultParcelSpan  = span().id("resultParcelSpan").textContent(messages.resultHeader(number)).element();
+//        
+//        resultButtonSpan.appendChild(expandBtn.element());
+//        resultButtonSpan.appendChild(closeBtn.element());
+
+        
+        
 
         SuggestBoxStore dynamicStore = new SuggestBoxStore() {
             @Override
@@ -295,8 +292,6 @@ public class AppEntryPoint implements EntryPoint {
         };
 
         SuggestBox suggestBox = SuggestBox.create(messages.searchPlaceholder(), dynamicStore);
-        // TODO deprecated?
-//        suggestBox.setIcon(Icons.ALL.search());
         suggestBox.addLeftAddOn(Icons.ALL.search());
         suggestBox.getInputElement().setAttribute("autocomplete", "off");
         suggestBox.getInputElement().setAttribute("spellcheck", "false");
@@ -320,7 +315,7 @@ public class AppEntryPoint implements EntryPoint {
                 SearchResult result = (SearchResult) item.getValue();
                 
                 // Grundstück: E-GRID beim Dataservice anfragen.
-                // Adresse: Aus der BBOX, d.h. der Koordinate des Eingangs das Grundstück filtern.
+                // Adresse:    Aus der BBOX, d.h. der Koordinate des Eingangs das Grundstück filtern.
                 
                 String searchUrl = null;
                 if (result.getDataproductId().equalsIgnoreCase("ch.so.agi.av.grundstuecke.rechtskraeftig")) {
@@ -437,7 +432,6 @@ public class AppEntryPoint implements EntryPoint {
         egridService.egridServer(XY, new AsyncCallback<EgridResponse>() {
             @Override
             public void onFailure(Throwable caught) {
-                loader.stop();
                 MessageDialog warningMessage = MessageDialog.createMessage("", messages.errorMessage()).setId("errorModal").error();
                 warningMessage.open();
                 console.log("error: " + caught.getMessage());
@@ -448,7 +442,6 @@ public class AppEntryPoint implements EntryPoint {
                 resetGui();
 
                 if (result.getResponseCode() != 200) {
-                    loader.stop();
                     MessageDialog warningMessage = MessageDialog.createMessage("", messages.errorMessage()).setId("errorModal").warning();
                     warningMessage.open();
                     return;
@@ -508,7 +501,6 @@ public class AppEntryPoint implements EntryPoint {
                         map.removeOverlay(realEstatePopup);
                     });
                     
-                    // TODO: Hackish, but it works.
                     // Wenn ich ohne ol.Overlay arbeite, dann ist das Popup nicht an die Karte
                     // geheftet (was mir noch egal wäre) aber ich schaffe das drag n droppen 
                     // nicht, was ich in diesem Fall notwendig fände.
@@ -642,58 +634,8 @@ public class AppEntryPoint implements EntryPoint {
                 headerRow.appendChild(resultButtonSpan);
                 resultCardContent.appendChild(headerRow);
                 
-                // Create the tabs objects. We need them later to add stuff.
-                Tab tabCadastre = Tab.create(messages.tabTitleCadastralSurveying().toUpperCase())
-                        .style()
-                        .setWidth("33%")
-                        .get();
-                Tab tabLandRegister = Tab.create(messages.tabTitleLandRegister().toUpperCase())
-                        .style()
-                        .setWidth("33%")
-                        .get();
-                Tab tabPlr = Tab.create(messages.tabTitlePlr().toUpperCase())
-                        .style()
-                        .setWidth("33%")
-                        .get();
-
-                HTMLElement tabsPanel = TabsPanel.create().setId("resultTabs")
-                    .setBackgroundColor(Color.RED_LIGHTEN_1)
-                    .setColor(Color.WHITE)
-                    .appendChild(tabCadastre)
-                    .appendChild(tabLandRegister.appendChild(span().textContent("N/A")))
-                    .appendChild(tabPlr)
-                    .element();
-           
-                // Add cadastre content.
-                HTMLElement cadastralSurveyingContent = addCadastralSurveyingContent(realEstateDPR);                
-                tabCadastre.appendChild(cadastralSurveyingContent);
-                
-                // Add oereb content.
                 HTMLElement oerebContent = addOerebContent(realEstateDPR);
-                tabPlr.appendChild(oerebContent);
-
-                // Hide wms layers only if ÖREB tab is active.
-                tabsPanel.addEventListener("click", new EventListener() {
-                    @Override
-                    public void handleEvent(Event evt) { 
-                        if (!tabPlr.isActive()) {
-                            for (String layerId : oerebWmsLayers) {
-                                Image wmsLayer = (Image) getMapLayerById(layerId);
-                                wmsLayer.setVisible(false); 
-                            }
-                        } else {
-                            List<AccordionPanel> panels = oerebInnerAccordion.getPanels();
-                            for (AccordionPanel panel : panels) {
-                                if (!panel.isHidden()) {
-                                    Image wmsLayer = (Image) getMapLayerById(panel.getId());
-                                    wmsLayer.setVisible(true);
-                                }
-                            }          
-                        }
-                    }
-                });
-                
-                resultDiv.appendChild(tabsPanel);
+                resultDiv.appendChild(oerebContent);
                 resultCardContent.appendChild(resultDiv);
                 resultCard.style.height = CSSProperties.HeightUnionType.of(RESULT_CARD_HEIGHT);
                 resultCard.style.overflow = "auto";
@@ -725,7 +667,7 @@ public class AppEntryPoint implements EntryPoint {
             div.appendChild(pdfBtn.element());
         }
 
-        // TODO: eventuell brauche ich das gar nicht. 
+        // TODO: Eventuell brauche ich das gar nicht. 
         // Drei einzelne Accordions?
         Accordion oerebAccordion = Accordion.create()
                 .setHeaderBackground(Color.GREY_LIGHTEN_3)
@@ -735,7 +677,6 @@ public class AppEntryPoint implements EntryPoint {
         
         div.appendChild(oerebAccordion.element());
         
-
         {
             AccordionPanel oerebAccordionPanelConcernedTheme = AccordionPanel.create(messages.concernedThemes());
             oerebAccordionPanelConcernedTheme.elevate(0);
@@ -756,6 +697,7 @@ public class AppEntryPoint implements EntryPoint {
             // TODO / FIXME
             // Event listener nur auf dem Header Element. Ansonsten schliesst es sich 
             // auch wenn ich auf einen Sub-Panel klicke.
+            // 2020-08-16: Verstehe ich nicht mehr.
             oerebAccordionPanelConcernedTheme.getHeaderElement().addEventListener(EventType.click, new EventListener() {
                 @Override
                 public void handleEvent(Event evt) {                    
@@ -794,11 +736,12 @@ public class AppEntryPoint implements EntryPoint {
                     
                     innerOerebPanelStateMap.put(layerId, false);
                     
-                    /*
-                    * Wegen des unterschiedlichen Umgangs mit Subthemen wird
-                    * es ein klein wenig kompliziert...
-                    * Falls wir nur SO unterstützen, wäre es einfacher.
-                    */
+                    // TODO 2020-08-16: Kann ich das für oereb-v2 entfernen, oder?
+                    // Weil ja jetzt klar ist, wie man es richtig macht.
+                    
+                    // Wegen des unterschiedlichen Umgangs mit Subthemen wird
+                    // es ein klein wenig kompliziert...
+                    // Falls wir nur SO unterstützen, wäre es einfacher.
                     String panelTitle;
                     if (theme.getSubtheme() != null && !theme.getSubtheme().isEmpty()) {
                         if (!theme.getSubtheme().substring(0, 2).equals("ch")) {
@@ -836,7 +779,6 @@ public class AppEntryPoint implements EntryPoint {
                     accordionPanel.getHeaderElement().addEventListener(EventType.click, new EventListener() {
                         @Override
                         public void handleEvent(Event evt) {
-                            //console.log("vorher: " + accordionPanel.getId() + " " + innerOerebPanelStateMap.get(accordionPanel.getId()));
                             if (innerOerebPanelStateMap.get(accordionPanel.getId())) {
                                 innerOerebPanelStateMap.put(accordionPanel.getId(), false);
                                 accordionPanel.hide();
@@ -844,8 +786,6 @@ public class AppEntryPoint implements EntryPoint {
                                 innerOerebPanelStateMap.put(accordionPanel.getId(), true);
                                 accordionPanel.show();
                             }
-                            //console.log("nachher: " + accordionPanel.getId() + " " + innerOerebPanelStateMap.get(accordionPanel.getId()));
-
                             evt.stopPropagation();
                         }
                     });
@@ -894,6 +834,7 @@ public class AppEntryPoint implements EntryPoint {
                             contentDiv.appendChild(processRestrictionRow(restriction, GeometryType.POINT));
                         }
 
+                        // 2020-08-16: Kann mit oereb-v2 entfernt werden.
                         // TODO / FIXME (?) Falls kein Share mitgeliefert wird (z.B. ZH). Ist es mandatory?
                         if (restriction.getNrOfPoints() == null && restriction.getLengthShare() == null
                                 && restriction.getAreaShare() == null) {
@@ -1189,66 +1130,13 @@ public class AppEntryPoint implements EntryPoint {
         return div;
     }
 
-    private HTMLElement addCadastralSurveyingContent(RealEstateDPR realEstateDPR) {
-        String number = realEstateDPR.getNumber();
-        String identnd = realEstateDPR.getIdentND();
-        String egrid = realEstateDPR.getEgrid();
-        int area = realEstateDPR.getLandRegistryArea();
-        String type = realEstateDPR.getRealEstateType();
-        String municipality = realEstateDPR.getMunicipality();
-        String subunitOfLandRegister = realEstateDPR.getSubunitOfLandRegister();
-        List<String> localNames = realEstateDPR.getLocalNames();
-
-        HTMLDivElement div = div().element();
-        
-        {
-            Button pdfBtn = Button.create(Icons.ALL.file_pdf_box_outline_mdi())
-                .setContent("PDF")
-                .setBackground(Color.WHITE)
-                .elevate(0)
-                .style()
-                .setColor("#ef5350")
-                .setBorder("1px #ef5350 solid")
-                .setPadding("5px 5px 5px 0px;")
-                .setMinWidth(px.of(120)).get();
-            
-            pdfBtn.setTooltip(messages.resultPDFTooltip());
-                    
-            pdfBtn.addClickListener(event -> {
-                Window.open(realEstateDPR.getCadastrePdfExtractUrl(), "_blank", null);
-            });
-                       
-            div.appendChild(pdfBtn.element());
-        }
-        
-        div.appendChild(addCadastralSurveyingContentKeyValue("&nbsp;", "&nbsp;"));
-        div.appendChild(addCadastralSurveyingContentKeyValue("E-GRID:", egrid));
-        div.appendChild(addCadastralSurveyingContentKeyValue("NBIdent:", new String(identnd == null ? "&ndash;" : identnd)));
-        div.appendChild(addCadastralSurveyingContentKeyValue("&nbsp;", "&nbsp;"));
-        div.appendChild(addCadastralSurveyingContentKeyValue("Grundstücksart:", type));
-        div.appendChild(addCadastralSurveyingContentKeyValue("Grundstücksfläche:", fmtDefault.format(area) + " m<sup>2</sup>"));
-        div.appendChild(addCadastralSurveyingContentKeyValue("&nbsp;", "&nbsp;"));        
-        div.appendChild(addCadastralSurveyingContentKeyValue("Gemeinde:", municipality));
-        div.appendChild(addCadastralSurveyingContentKeyValue("Grundbuch:",  new String(subunitOfLandRegister == null ? "&ndash;" : subunitOfLandRegister)));
-        div.appendChild(addCadastralSurveyingContentKeyValue("&nbsp;", "&nbsp;"));
-        div.appendChild(addCadastralSurveyingContentKeyValue("Flurnamen:", String.join(", ", localNames)));
-        
-        div.appendChild(div().css("fakeColumn").element());
-        div.appendChild(addCadastralSurveyingContentBuildings(realEstateDPR.getBuildings()));
-
-        div.appendChild(div().css("fakeColumn").element());
-        div.appendChild(addCadastralSurveyingContentLandCoverShares(realEstateDPR.getLandCoverShares()));
-
-        div.appendChild(div().css("fakeColumn").element());
-        div.appendChild(addCadastralSurveyingContentOffices(realEstateDPR));
-
-        return div;
-    }
-
     public final class MapSingleClickListener implements ol.event.EventListener<MapBrowserEvent> {
         @Override
         public void onEvent(MapBrowserEvent event) {
-            loader.start();
+            // loader.start() nicht bereits hier. Mit diesem Klick wird nur das Grundstück gesucht. Falls man bereits
+            // hier den Loader anzeigt, wirkt das störend, da er nur ganz kurz erscheint und entweder das Auswahlfenster
+            // (Selbstrecht, Liegenschaft) erscheint oder gleich gestoppt wird und der nächste Loader gestartet
+            // wird.
             Coordinate coordinate = event.getCoordinate();
             sendCoordinateToServer(coordinate.toStringXY(3), event);
         }
@@ -1337,6 +1225,7 @@ public class AppEntryPoint implements EntryPoint {
         wmsLayer.set(ID_ATTR_NAME, referenceWms.getLayers());
         wmsLayer.setVisible(false);
 
+        // 2020-08-16: Mit oereb-v2 entfernen.
         // FIXME: ZH is always 0 which is completely transparent.
         if (referenceWms.getLayerOpacity() == 0) {
             wmsLayer.setOpacity(0.6);
@@ -1347,146 +1236,6 @@ public class AppEntryPoint implements EntryPoint {
         // Hintergrundkarten nicht zwingend transparent sind.
         // wmsLayer.setZIndex(referenceWms.getLayerIndex());
         return wmsLayer;
-    }
-
-    // Add a key / value to cadastral surveying result column
-    private HTMLElement addCadastralSurveyingContentKeyValue(String key, String value) {
-        HTMLDivElement row = div().element();
-        HTMLElement keyElement = span().css("cadastralSurveyingInfoKey").innerHtml(SafeHtmlUtils.fromTrustedString(key)).element();
-        HTMLElement valueElement = span().innerHtml(SafeHtmlUtils.fromTrustedString(value)).element();
-        
-        row.appendChild(keyElement);
-        row.appendChild(valueElement);
-        return row;        
-    }
-    
-    private HTMLElement addCadastralSurveyingContentBuildings(ArrayList<Building> buildings) {
-        HTMLDivElement div = div().element();
-        
-        Row buildingTitle = Row.create().appendChild(span().css("cadastralSurveyingInfoKey").style("padding-top:15px;").textContent("Gebäude"));
-        div.appendChild(buildingTitle.element());
-        
-        Row buildingHeaderRow = Row.create();
-        buildingHeaderRow.appendChild(Column.span3().style().setFontSize(SMALL_FONT_SIZE).get().setTextContent("EGID"));
-        buildingHeaderRow.appendChild(Column.span2().style().setFontSize(SMALL_FONT_SIZE).setTextAlign("right").get().setTextContent("Fläche"));
-//        buildingHeaderRow.appendChild(Column.span2().style().setFontSize(SMALL_FONT_SIZE).setTextAlign("left").get().setTextContent("projektiert"));
-//        buildingHeaderRow.appendChild(Column.span2().style().setFontSize(SMALL_FONT_SIZE).setTextAlign("left").get().setTextContent("unterirdisch"));
-        buildingHeaderRow.appendChild(Column.span7().style().setFontSize(SMALL_FONT_SIZE).setTextAlign("left").get().setTextContent("Adressen"));
-        div.appendChild(buildingHeaderRow.element());
-        
-        for (Building building: buildings) {
-            Row buildingRow = Row.create().css("buildingRow");
-            if (building.getEgid() != 0) {
-                buildingRow.appendChild(Column.span3().setTextContent(String.valueOf(building.getEgid())));
-            } else {
-                buildingRow.appendChild(Column.span3().appendChild(span().innerHtml(SafeHtmlUtils.fromTrustedString("&ndash;"))));
-            }
-            buildingRow.appendChild(Column.span2().style().setTextAlign("right").get().appendChild(span().innerHtml(SafeHtmlUtils.fromTrustedString(fmtSquareMeter.format(building.getArea()) + " m<sup>2</sup>"))));
-
-            List<BuildingEntry> entries = building.getBuildingEntries();
-            String allAddressesString = "";
-            for (int i=0; i<entries.size(); i++) {
-                PostalAddress address = entries.get(i).getPostalAddress();
-                if (address != null) {
-                    String addressString = address.getStreet() + " " + address.getNumber() + ", " + address.getPostalCode() + " " + address.getCity();
-                    if (i!=0) {
-                        allAddressesString += "<br>" + addressString;
-                    } else {
-                        allAddressesString += addressString;
-                    }
-                }
-            }
-            buildingRow.appendChild(Column.span7().appendChild(span().innerHtml(SafeHtmlUtils.fromTrustedString(allAddressesString))));
-            div.appendChild(buildingRow.element()); 
-        }
-        return div;
-    }
-    
-    private HTMLElement addCadastralSurveyingContentLandCoverShares(ArrayList<LandCoverShare> landCoverShares) {
-        HTMLDivElement div = div().element();
-
-        Row landCoverTitle = Row.create().appendChild(span().css("cadastralSurveyingInfoKey").style("padding-top:15px;").textContent("Bodenbedeckung"));
-        div.appendChild(landCoverTitle.element());
-        
-        double landCoverShareSum = 0.0;
-        for (LandCoverShare landCoverShare : landCoverShares) {
-            Row landCoverShareRow = Row.create().css("buildingRow");
-            landCoverShareRow.appendChild(Column.span4().setTextContent(landCoverShare.getTypeDescription()));
-            landCoverShareRow.appendChild(Column.span3().style().setTextAlign("right").get().appendChild(span().innerHtml(SafeHtmlUtils.fromTrustedString(fmtSquareMeter.format(landCoverShare.getArea()) + " m<sup>2</sup>"))));
-            div.appendChild(landCoverShareRow.element());
-            
-            landCoverShareSum += landCoverShare.getArea();
-        }
-        Row landCoverShareSumRow = Row.create().css("buildingRow");
-        landCoverShareSumRow.appendChild(Column.span4().appendChild(span().innerHtml(SafeHtmlUtils.fromTrustedString("<i>Total</i>"))));
-        landCoverShareSumRow.appendChild(Column.span3().style().setTextAlign("right").get().appendChild(span().innerHtml(SafeHtmlUtils.fromTrustedString("<i>"+fmtSquareMeter.format(landCoverShareSum) + " m<sup>2</sup></i>"))));
-        div.appendChild(landCoverShareSumRow.element());
-        
-        return div;
-    }
-
-    private HTMLElement addCadastralSurveyingContentOffices(RealEstateDPR realEstateDPR) {
-        HTMLDivElement div = div().element();
-        
-        {
-            Row landRegisterOfficeTitle = Row.create().appendChild(span().css("cadastralSurveyingInfoKey").style("padding-top:15px;").textContent("Grundbuchamt"));
-            div.appendChild(landRegisterOfficeTitle.element());
-
-            Row addressRow = Row.create().css("cadastreAddressRow");
-            Office landRegisterOffice = realEstateDPR.getCadastreLandRegisterOffice();
-            String name = landRegisterOffice.getName();
-            String street = landRegisterOffice.getStreet();
-            String number = landRegisterOffice.getNumber();
-            String postalCode = landRegisterOffice.getPostalCode();
-            String city = landRegisterOffice.getCity();
-            String web = landRegisterOffice.getOfficeAtWeb();
-            String email = landRegisterOffice.getEmail();
-            
-            String addressHtml = ""
-                    + name + "<br>"
-                    + street + " " + number + "<br>"
-                    + postalCode + " " + city + "<br>"
-                    + "<a class='resultLink' href=" + web + " target='_blank'>"+web+"</a><br>"
-                    + "<a class='resultLink' mailto=" + email + ">"+email+"</a>";
-            
-            addressRow.appendChild(Column.span12().style().setTextAlign("left").get().appendChild(span().innerHtml(SafeHtmlUtils.fromTrustedString(addressHtml))));
-            div.appendChild(addressRow.element());
-        }
-        
-        {
-            Row surveyorOfficeTitle = Row.create().appendChild(span().css("cadastralSurveyingInfoKey").style("padding-top:15px;").textContent("Nachführungsgeometer"));
-            div.appendChild(surveyorOfficeTitle.element());
-
-            Row addressRow = Row.create().css("cadastreAddressRow");
-            Office surveyorOffice = realEstateDPR.getCadastreSurveyorOffice();
-            String firstName = surveyorOffice.getFirstName();
-            String lastName = surveyorOffice.getLastName();
-            String name = surveyorOffice.getName();
-            String line1 = surveyorOffice.getLine1();
-            String street = surveyorOffice.getStreet();
-            String number = surveyorOffice.getNumber();
-            String postalCode = surveyorOffice.getPostalCode();
-            String city = surveyorOffice.getCity();
-            String web = surveyorOffice.getOfficeAtWeb();
-            String email = surveyorOffice.getEmail();
-            
-            String addressHtml = ""
-                    + firstName + " " + lastName + "<br>"
-                    + name + "<br>";
-            if (line1 != null) {
-                addressHtml += line1 + "<br>";
-            }
-            addressHtml += ""
-                    + street + " " + number + "<br>"
-                    + postalCode + " " + city + "<br>"
-                    + "<a class='resultLink' href=" + web + " target='_blank'>"+web+"</a><br>"
-                    + "<a class='resultLink' mailto=" + email + ">"+email+"</a>";
-            
-            addressRow.appendChild(Column.span12().style().setTextAlign("left").get().appendChild(span().innerHtml(SafeHtmlUtils.fromTrustedString(addressHtml))));
-            div.appendChild(addressRow.element());
-        }
-
-        return div;
     }
     
     // Create the vector layer for highlighting the
