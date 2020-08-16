@@ -209,15 +209,7 @@ public class AppEntryPoint implements EntryPoint {
         logoDiv.appendChild(logoCantonSpan);
 
         searchCard.appendChild(logoDiv);
-          
-//        HTMLElement resultParcelSpan  = span().id("resultParcelSpan").textContent(messages.resultHeader(number)).element();
-//        
-//        resultButtonSpan.appendChild(expandBtn.element());
-//        resultButtonSpan.appendChild(closeBtn.element());
-
         
-        
-
         SuggestBoxStore dynamicStore = new SuggestBoxStore() {
             @Override
             public void filter(String value, SuggestionsHandler suggestionsHandler) {
