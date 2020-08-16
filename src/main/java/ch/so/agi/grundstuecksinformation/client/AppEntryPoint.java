@@ -295,8 +295,6 @@ public class AppEntryPoint implements EntryPoint {
         };
 
         SuggestBox suggestBox = SuggestBox.create(messages.searchPlaceholder(), dynamicStore);
-        // TODO deprecated?
-//        suggestBox.setIcon(Icons.ALL.search());
         suggestBox.addLeftAddOn(Icons.ALL.search());
         suggestBox.getInputElement().setAttribute("autocomplete", "off");
         suggestBox.getInputElement().setAttribute("spellcheck", "false");
